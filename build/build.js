@@ -1,109 +1,190 @@
-var Morph = (function () {
-    function Morph() {
+const puzzle = `
+   -----------
+   .---d-----.
+   .invention.
+   .mass oe  .
+   .   ind   .
+   .   gne   .
+   .   night .
+   magic     .
+   -----------
+`;
+const words = [
+    "invention",
+    "sing",
+    "mass",
+    "design",
+];
+class Board {
+    constructor(p, table) {
+        this.border = 50;
+        this.cell = 50;
+        this.location = {};
+        this.marked = {};
+        this.dirty = true;
+        this.p = p;
+        this.table = table;
+        this.rows = table.length;
+        this.cols = table[0].length;
+        this.createIndex();
     }
-    Morph.prototype.setup = function () {
-        this.shapes = [];
-        this.currentShape = 0;
-        this.shapes.push({ points: Shapes.circle(100), color: color('#009CDF') });
-        this.shapes.push({ points: Shapes.circle(150), color: color(255, 204, 0) });
-        this.shapes.push({ points: Shapes.square(50), color: color(175, 100, 220) });
-        this.morph = new Array();
-        var highestCount = 0;
-        for (var i = 0; i < this.shapes.length; i++) {
-            highestCount = Math.max(highestCount, this.shapes[i].points.length);
-        }
-        for (var i = 0; i < highestCount; i++) {
-            this.morph.push(new p5.Vector());
-        }
-    };
-    Morph.prototype.recalc = function () {
-        var totalDistance = 0;
-        var points = this.shapes[this.currentShape].points;
-        for (var i = 0; i < points.length; i++) {
-            var v1 = points[i];
-            var v2 = this.morph[i];
-            v2.lerp(v1, 0.1);
-            totalDistance += p5.Vector.dist(v1, v2);
-        }
-        if (totalDistance < 0.1) {
-            this.currentShape++;
-            if (this.currentShape >= this.shapes.length) {
-                this.currentShape = 0;
+    createIndex() {
+        this.location = {};
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                const ch = this.table[r][c];
+                this.location[ch] = this.location[ch] || [];
+                this.location[ch] = [...this.location[ch], { row: r, col: c }];
             }
         }
-    };
-    Morph.prototype.draw = function () {
-        this.recalc();
-        var color = this.shapes[this.currentShape].color;
-        var points = this.shapes[this.currentShape].points;
-        translate(width / 2, height / 2);
-        strokeWeight(4);
-        beginShape();
-        noFill();
-        stroke(color);
-        for (var i = 0; i < points.length; i++) {
-            var v = this.morph[i];
-            vertex(v.x, v.y);
-        }
-        endShape(CLOSE);
-    };
-    return Morph;
-}());
-var Shapes = (function () {
-    function Shapes() {
     }
-    Shapes.circle = function (size) {
-        var points = new Array();
-        for (var angle = 0; angle < 360; angle += 9) {
-            var v = p5.Vector.fromAngle(radians(angle - 135));
-            v.mult(size);
-            points.push(v);
+    at(row, col) {
+        return this.table[row][col];
+    }
+    mark(row, col) {
+        this.marked[row] = this.marked[row] || {};
+        this.marked[row][col] = true;
+    }
+    draw() {
+        if (!this.dirty) {
+            return;
         }
-        return points;
-    };
-    Shapes.square = function (size) {
-        var points = new Array();
-        for (var x = -size; x < size; x += 10) {
-            points.push(createVector(x, -size));
+        this.dirty = false;
+        this.drawCells();
+        this.drawMarked();
+        this.drawLetters();
+    }
+    get left() { return this.border; }
+    get top() { return this.border; }
+    get height() { return this.rows * this.cell; }
+    get width() { return this.cols * this.cell; }
+    get dr() { return this.height / this.rows; }
+    get dc() { return this.width / this.cols; }
+    reveal(word) {
+        let x = word[0];
+        if (!(x in this.location)) {
+            console.log(x, "not in index");
+            return;
         }
-        for (var y = -size; y < size; y += 10) {
-            points.push(createVector(size, y));
+        for (let i = 0, hits = this.location[x]; i < hits.length; i++) {
+            console.log("x: ", x, "hits:", hits);
+            let c = hits[i];
+            let dirs = this.dirForLetter(c, word[1]);
+            console.log("dirs:", dirs);
+            for (let d of dirs) {
+                console.log("    exploring from:", c.row, c.col, " in  dir:", d.row, d.col);
+                let cells = this.wordFrom(c, d, word);
+                if (cells) {
+                    console.log("found word", word);
+                    cells.forEach(x => this.mark(x.row, x.col));
+                    return;
+                }
+            }
         }
-        for (var x = size; x > -size; x -= 10) {
-            points.push(createVector(x, size));
+    }
+    wordFrom(x, dir, word) {
+        const len = word.length;
+        const end = { row: x.row + dir.row * (len - 1), col: x.col + dir.col * (len - 1) };
+        console.log("  ending ... :", end.row, end.col);
+        if (end.row < 0 || end.row >= this.rows ||
+            end.col < 0 || end.col >= this.cols) {
+            console.log(" ... out of bound ", end);
+            return "";
         }
-        for (var y = size; y > -size; y -= 10) {
-            points.push(createVector(-size, y));
+        if (this.at(end.row, end.col) != word[len - 1]) {
+            console.log("  last index does not match");
+            return "";
         }
-        return points;
-    };
-    Shapes.star = function (x, y, radius1, radius2, npoints) {
-        var angle = TWO_PI / npoints;
-        var halfAngle = angle / 2.0;
-        var points = new Array();
-        for (var a = 0; a < TWO_PI; a += angle) {
-            var sx = x + cos(a) * radius2;
-            var sy = y + sin(a) * radius2;
-            points.push(createVector(sx, sy));
-            sx = x + cos(a + halfAngle) * radius1;
-            sy = y + sin(a + halfAngle) * radius1;
-            points.push(createVector(sx, sy));
+        let found = [];
+        for (let i = 0; i < len; i++) {
+            const row = x.row + dir.row * i;
+            const col = x.col + dir.col * i;
+            const ch = this.at(row, col);
+            if (word[i] != ch) {
+                console.log("    at:(", row, col, ") is not ", word[i]);
+                return [];
+            }
+            found.push({ row, col });
         }
-        return points;
-    };
-    return Shapes;
-}());
-var morph;
-function setup() {
-    createCanvas(windowWidth, windowHeight);
-    morph = new Morph();
-    morph.setup();
+        return found;
+    }
+    dirForLetter(x, target) {
+        let all = [
+            { row: x.row - 1, col: x.col - 1 },
+            { row: x.row - 1, col: x.col },
+            { row: x.row - 1, col: x.col + 1 },
+            { row: x.row, col: x.col - 1 },
+            { row: x.row, col: x.col + 1 },
+            { row: x.row + 1, col: x.col - 1 },
+            { row: x.row + 1, col: x.col },
+            { row: x.row + 1, col: x.col + 1 },
+        ];
+        return all.filter(c => c.row >= 0 && c.row <= this.rows &&
+            c.col >= 0 && c.col <= this.cols &&
+            this.at(c.row, c.col) == target).map(c => ({ row: c.row - x.row, col: c.col - x.col }));
+    }
+    drawLetters() {
+        const { p, left, top, dr, dc, cell } = this;
+        p.fill(0);
+        p.stroke(0);
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                const x = c * dc + left + cell / 2.5;
+                const y = r * dr + top + cell / 1.85;
+                p.text(this.at(r, c).toUpperCase(), x, y);
+            }
+        }
+    }
+    drawMarked() {
+        const { p, left, top, dr, dc, cell } = this;
+        p.fill(0, 200, 0);
+        for (let r = 0; r < this.rows; r++) {
+            if (!this.marked[r]) {
+                continue;
+            }
+            for (let c = 0; c < this.cols; c++) {
+                if (!this.marked[r][c]) {
+                    continue;
+                }
+                const x = c * dc + left;
+                const y = r * dr + top;
+                p.rect(x, y, cell, cell);
+            }
+        }
+        p.noFill();
+    }
+    drawCells() {
+        const { p, left, top, height, width, dr, dc } = this;
+        p.stroke(200, 100, 200);
+        p.rect(top, left, width, height);
+        p.stroke(0);
+        for (let r = 1; r < this.rows; r++) {
+            const y = top + r * dr;
+            p.line(left, y, left + width, y);
+        }
+        for (let c = 1; c < this.cols; c++) {
+            const x = left + c * dc;
+            p.line(x, top, x, top + height);
+        }
+    }
 }
-function windowResized() {
-    resizeCanvas(windowWidth, windowHeight);
-}
-function draw() {
-    background(100);
-    morph.draw();
-}
+const wordfinder = (p) => {
+    p.windowResized = () => {
+        p.resizeCanvas(p.windowWidth, p.windowHeight);
+    };
+    const table = puzzle
+        .split("\n")
+        .map(x => x.trim())
+        .filter(x => x.length > 0);
+    console.table(table);
+    let board = new Board(p, table);
+    words.forEach(w => board.reveal(w));
+    p.setup = () => {
+        p.createCanvas(p.windowWidth, p.windowHeight);
+        p.noLoop();
+    };
+    p.draw = () => { board.draw(); };
+    p.mousePressed = () => { };
+};
+const p = new p5(wordfinder);
 //# sourceMappingURL=build.js.map
