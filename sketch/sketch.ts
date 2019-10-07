@@ -1,22 +1,53 @@
 
 const puzzle=`
-   -----------
-   .---d-----.
-   .invention.
-   .mass oe  .
-   .   ind   .
-   .   gne   .
-   .   night .
-   magic     .
-   -----------
+ asbtcdeseussitf
+ torangestsoapss
+ ouxezlvwseuecrq
+ mpympaunekcihcu
+ aasprstqlatpeua
+ tbandaerbceveqs
+ odbcaccpadagsph
+ eocrneootedweng
+ sguimrbgesfapeh
+ rfdslehdgesxozi
+ eoopmahselistos
+ aonsklievkzyjrp
+ fdklimcjkcaalfo
+ hgitjivhlimbmkh
+ gtekramrepusnjs
 `
-const words = [
-  //"invention",
-  "sing",
-  //"mass",
-  "design",
-]
-
+const words = `
+  apples
+  bakedbeans
+  bread
+  cake
+  cereal
+  cheese
+  chicked
+  crips
+  dogfood
+  eggs
+  frozen
+  jam
+  list
+  meat
+  milk
+  oranges
+  peas
+  pickle
+  pie
+  rice
+  shampoo
+  shops
+  soap
+  soup
+  squash
+  supermarket
+  tea
+  tissues
+  tomatoes
+  vegetables
+`
 type Cell = {
   row : number
   col : number
@@ -31,7 +62,6 @@ class Board {
   cell : number  = 50
   location :  any = {}
   marked :  any = {}
-  dirty :  boolean = true
 
   constructor(p : p5, table: string[]) {
     this.p = p
@@ -56,16 +86,18 @@ class Board {
     return this.table[row][col]
   }
 
-  mark(row: number, col: number) {
-    this.marked[row] = this.marked[row] || {}
-    this.marked[row][col] = true
+  mark(cells: Cell[]) {
+    const {map, random, color} = this.p
+    const g = map(random(), 0, 1.0, 120, 255)
+
+    cells.forEach((c, i) => {
+      this.marked[c.row] = this.marked[c.row] || {}
+      const clr = this.p.color(10, g - i*6, 170)
+      this.marked[c.row][c.col] = clr
+    })
   }
 
   draw() {
-    if (!this.dirty) {
-      return
-    }
-    this.dirty = false
     this.drawCells()
     this.drawMarked()
     this.drawLetters()
@@ -79,31 +111,35 @@ class Board {
   get dc() { return this.width / this.cols }
 
   reveal(word: string) {
-    let x = word[0]
-    if (! (x in this.location)) {
-      console.log(x, "not in index")
-      return
-    }
-
-    for (let i = 0, hits = this.location[x]; i < hits.length; i++) {
-      console.log("x: ", x, "hits:", hits)
-      let c = hits[i]
-      let dirs = this.dirForLetter(c, word[1])
-      console.log("dirs:", dirs)
-
-      for (let d of  dirs) {
-        console.log("    exploring from:", c.row, c.col, " in  dir:", d.row, d.col)
-        let cells = this.wordFrom(c, d, word)
-
-        if (cells) {
-          console.log("found word", word)
-          cells.forEach(x => this.mark(x.row, x.col))
-          return
-        }
-
+    const impl =() => {
+      let x = word[0]
+      if (! (x in this.location)) {
+        console.log(x, "not in index")
+        return
       }
 
+      const hits = this.location[x]
+      console.log("x: ", x, "hits:", hits)
+
+      for (let cell of hits) {
+        let dirs = this.dirForLetter(cell, word[1])
+        console.log("dirs:", dirs)
+
+        for (let d of  dirs) {
+          console.log("exploring from:", cell.row, cell.col, " in  dir:", d.row, d.col)
+          let cells = this.wordFrom(cell, d, word)
+          if (cells.length > 0) {
+            console.log("found word", word, cells)
+            this.mark(cells)
+            return
+          }
+        }
+      }
     }
+    console.group(word)
+    const ret = impl()
+    console.groupEnd()
+    return ret
   }
 
   wordFrom(x : Cell, dir: Cell, word: string): Cell[]{
@@ -150,8 +186,8 @@ class Board {
       {row: x.row + 1, col: x.col + 1},
     ]
     return all.filter(c =>
-      c.row >=0 && c.row <= this.rows &&
-      c.col >= 0 && c.col <= this.cols &&
+      c.row >=0 && c.row < this.rows &&
+      c.col >= 0 && c.col < this.cols &&
       this.at(c.row, c.col) == target
     ).map(c => ({row: c.row - x.row, col: c.col - x.col }) )
   }
@@ -172,23 +208,24 @@ class Board {
   drawMarked() {
     const {p, left, top,  dr, dc, cell} = this
 
-    p.fill('rgba(0, 255, 0, 0.25)');
     for (let r = 0; r < this.rows; r++) {
       if (!this.marked[r]){
         continue
       }
 
       for (let c = 0; c < this.cols; c++) {
-        if (!this.marked[r][c]) {
+        const clr = this.marked[r][c]
+        if (!clr) {
           continue
         }
 
         const x = c  * dc  + left
         const y = r  * dr  + top
 
+        p.fill(clr);
         p.rect(x, y, cell, cell)
 
-        //console.log("   mark: ", r, c, "   >>> rect", x, y, cell, cell)
+        console.log(" mark", r, c, " | rect", x, y, cell, cell, " | clr", clr)
       }
     }
     p.noFill()
@@ -229,14 +266,23 @@ const wordfinder = (p : p5) => {
   console.table(table)
   let board = new Board(p,table)
 
-  words.forEach(w => board.reveal(w))
+  const lookFor = words
+    .split("\n")
+    .map(x => x.trim())
+    .filter(x => x.length > 0)
+
+    console.table(lookFor)
+    lookFor.forEach(w => board.reveal(w))
 
   p.setup = () => {
     p.createCanvas(p.windowWidth, p.windowHeight)
     p.noLoop()
   }
 
-  p.draw = () => { board.draw() }
+  p.draw = () => {
+    p.fill(255)
+    board.draw()
+  }
 
   p.mousePressed = () => { }
 }
