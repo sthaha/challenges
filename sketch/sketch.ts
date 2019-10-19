@@ -1,8 +1,12 @@
-const boids = 50
+const boids = 200
+const BoidRadius = 8
 
-const nearBy = 80
-const MaxForce =  0.95
-const MaxSpeed =  7
+const nearBy = BoidRadius * 5
+const MinSeperation = BoidRadius * 3
+
+const MaxForce =  2.0
+const MaxSpeed =  8
+const showRadius = false
 
 class Boid {
   p : p5
@@ -17,7 +21,7 @@ class Boid {
     this.pos = p.createVector(p.random(p.width), p.random(p.height))
 
     this.velocity = p5.Vector.random2D()
-    this.velocity.setMag(p.random(2, 5))
+    this.velocity.setMag(p.random(2, MaxSpeed))
     this.accel = p.createVector()
 
     this.speed = MaxSpeed
@@ -26,10 +30,13 @@ class Boid {
   draw() {
     const {p, pos, neighbours} = this
     p.noStroke()
-    p.fill(130, 130, 210, 50 + 140 * 1/(neighbours.length + 1))
-    p.ellipse(pos.x, pos.y, nearBy +16, nearBy +16)
-    p.fill(160)
-    p.ellipse(pos.x, pos.y, 16, 16)
+
+    if (showRadius) {
+      p.fill(130, 130, 210, 50 + 140 * 1/(neighbours.length + 1))
+      p.ellipse(pos.x, pos.y, nearBy + BoidRadius, nearBy +BoidRadius)
+    }
+    p.fill(20, 140, 220, 200)
+    p.ellipse(pos.x, pos.y, BoidRadius, BoidRadius)
   }
 
 
@@ -47,8 +54,8 @@ class Boid {
 
     // find the steering vector
     steer.sub(velocity)
+
     steer.setMag(speed)
-    // ensure the turn is ma
     steer.limit(MaxForce)
     return steer
   }
@@ -69,32 +76,69 @@ class Boid {
 
     // find the steering vector to that position
     steer.sub(pos)
-    steer.setMag(speed)
 
     // find the change in my velocity to reach there
     steer.sub(velocity)
+
+    steer.setMag(speed)
     steer.limit(MaxForce)
     return steer
   }
 
-  update(flock : Boid[]) {
-    const {pos, velocity, accel, p} = this
-    this.neighbours = flock.filter(x => x != this && pos.dist(x.pos) <= nearBy)
+  seperation() {
+    const {pos, speed, velocity, neighbours,  p} = this
 
-    //const steer = this.align()
-    //this.accel = steer
+    let steer = p.createVector()
+    if (neighbours.length == 0) {
+      return steer
+    }
 
-    const cohesion = this.cohesion()
-    this.accel = cohesion
+    // avg position
+    let inRange = 0
+    for (let b of neighbours) {
+      const dist = pos.dist(b.pos)
+      if (dist > MinSeperation || dist === 0) {
+        continue
+      }
+      // vector Other -> me
+      let sepForce = p5.Vector.sub(pos, b.pos)
+      sepForce.div(dist)
+      steer.add(sepForce)
+      inRange++
+    }
+    steer.div(p.max(inRange, 1))
 
-    //steer.add(cohesion).limit(MaxForce)
-    //this.accel = steer
+    steer.setMag(speed)
+    steer.limit(MaxForce)
+    return steer
 
-    pos.add(velocity)
-    velocity.add(accel)
-    this.wrap()
   }
 
+  update(flock : Boid[]) {
+    const {pos, velocity, p} = this
+    this.neighbours = flock.filter(x => x != this && pos.dist(x.pos) <= nearBy)
+
+
+    let accel = p.createVector()
+
+    const sep = this.seperation()
+    accel.add(sep)
+
+    const cohesion = this.cohesion()
+    accel.add(cohesion)
+
+
+    const steer = this.align()
+    accel.add(steer)
+
+
+    accel.limit(MaxForce)
+    velocity.add(accel)
+    velocity.limit(MaxSpeed)
+
+    pos.add(velocity)
+    this.wrap()
+  }
 
   wrap() {
     let {pos} = this
@@ -135,10 +179,13 @@ const sketch = (p : p5) =>  {
   p.draw = () => {
     p.background(0)
     p.fill(0)
+
+    const snapshot = [...flock]
     for (let f of flock) {
-      f.update(flock)
+      f.update(snapshot)
       f.draw()
     }
+
   }
 }
 
