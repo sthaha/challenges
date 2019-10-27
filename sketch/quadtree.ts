@@ -35,13 +35,23 @@ class Rect implements Container {
   }
 
   intersects(o: Rect): boolean {
-    const {x,y} = this
-    const left = (x <= o.x) ? this : o
-    const right = (x > o.x) ? this : o
-    const rTopLeft = {x: right.x, y: right.y}
-    const rBottomLeft = {x: right.x, y: right.y+right.h}
-    return left.contains(rTopLeft) || left.contains(rBottomLeft)
+
+    // find left and right rect
+    const [l, r] = this.x < o.x ? [this, o] : [o, this]
+    // top and bottom rect
+    const [t, b] = this.y < o.y ? [this, o] : [o, this]
+
+    //console.group()
+      //console.log([this.x, this.y, this.w, this.h],  [o.x, o.y, o.w, o.h])
+      //console.log(l.x + l.w + r.w, r.x + r.w)
+      //console.log(t.y + t.h + b.h, b.y + b.h)
+    //console.groupEnd()
+    // see if the
+    // - right rect x is inside left rect
+    // - the bottom rect is inside top rect
+    return (l.x + l.w) > r.x && (t.y + t.h) > b.y
   }
+
 }
 
 class QuadTree {

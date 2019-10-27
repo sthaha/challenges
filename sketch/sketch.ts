@@ -34,12 +34,13 @@ const sketch = (p : p5) =>  {
 
 
 
-    const r = new Rect(p.mouseX - 150, p.mouseY-40, 300, 80)
+    const r = new Rect(p.mouseX - 150, p.mouseY-40, 300, 180)
 
     const highlight = qtree.query(r)
-    p.fill(0, 220, 140, 180)
+    p.stroke(0, 222, 160, 160)
+    p.fill(0, 200, 140, 180)
     for (let pt of highlight) {
-      p.ellipse(pt.x, pt.y, 8, 8)
+      p.ellipse(pt.x, pt.y, 12, 12)
     }
 
     p.rectMode(p.CENTER)
