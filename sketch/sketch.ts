@@ -18,6 +18,7 @@ const sketch = (p : p5) =>  {
       points.push(pt)
       qtree.insert(pt)
     }
+    //p.noLoop()
 
   }
 
@@ -34,24 +35,22 @@ const sketch = (p : p5) =>  {
 
 
 
-    const r = new Rect(p.mouseX - 150, p.mouseY-40, 300, 180)
 
-    const highlight = qtree.query(r)
+    console.log("mouse:", p.mouseX, p.mouseY)
+    //const c = new Rect(p.mouseX - 150, p.mouseY-150, 300, 300)
+    const c = new Circle(p.mouseX, p.mouseY, 100)
+
+    const highlight = qtree.query(c)
     p.stroke(0, 222, 160, 160)
     p.fill(0, 200, 140, 180)
     for (let pt of highlight) {
       p.ellipse(pt.x, pt.y, 12, 12)
     }
 
-    p.rectMode(p.CENTER)
-    p.noFill()
-    p.stroke(0, 200, 120, 100)
-    p.strokeWeight(2)
-    p.rect(r.midX, r.midY, r.w, r.h)
+    c.draw(p)
   }
 
-  p.mouseMoved = () => {
-  }
+  p.mousePressed = () => { p.redraw(); }
 
   p.mouseDragged = () => {
     console.log("pressed: ", p.mouseIsPressed)

@@ -7,6 +7,63 @@ interface Container {
   intersects(other: Container): boolean
 }
 
+class Circle implements Container {
+  x: number
+  y: number
+  r: number
+
+  constructor(x : number, y:number, r:number) {
+    this.x = x
+    this.y = y
+    this.r = r
+  }
+
+  contains(p: Point): boolean {
+    const {x, y, r} = this
+    const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y)**2)
+
+    if (!this.boundingRect().contains(p) && dist <= r) {
+      console.log("me", x, y, r)
+      console.log("pt", p.x, p.y,  "| dist", dist)
+    }
+
+    return dist <= r
+  }
+
+  intersects(o: Rect): boolean {
+    //const {x, y, r} = this
+
+    //const sq = this.boundingRect()
+    //console.log("me", x, y, r)
+    //console.log("sq", sq.x, sq.y, sq.w, sq.h)
+    //console.log("other", o.x, o.y, o.w, o.h)
+
+    return this.boundingRect().intersects(o)
+  }
+
+  draw(p: p5) {
+    const {x, y, r} = this
+    const d = r * 2
+
+    p.noFill()
+    p.stroke(220, 220, 0, 200)
+    p.ellipse(x, y, d, d)
+    this.boundingRect().draw(p)
+  }
+
+  boundingRect(): Rect {
+    const {x, y, r} = this
+    const left = Math.max(x -r, 0)
+    const w = x+r - left
+
+    const top = Math.max(y -r, 0)
+    const h = y+r - top
+    return new Rect(left,top, w, h)
+  }
+
+}
+
+
 class Rect implements Container {
   x: number
   y: number
@@ -41,17 +98,26 @@ class Rect implements Container {
     // top and bottom rect
     const [t, b] = this.y < o.y ? [this, o] : [o, this]
 
-    //console.group()
-      //console.log([this.x, this.y, this.w, this.h],  [o.x, o.y, o.w, o.h])
-      //console.log(l.x + l.w + r.w, r.x + r.w)
-      //console.log(t.y + t.h + b.h, b.y + b.h)
-    //console.groupEnd()
+    console.group()
+      console.log([this.x, this.y, this.w, this.h],  [o.x, o.y, o.w, o.h])
+      console.log(l.x + l.w + r.w, r.x + r.w)
+      console.log(t.y + t.h + b.h, b.y + b.h)
+    console.groupEnd()
     // see if the
     // - right rect x is inside left rect
     // - the bottom rect is inside top rect
     return (l.x + l.w) > r.x && (t.y + t.h) > b.y
   }
 
+
+  draw(p: p5) {
+    const {x, y, w, h} = this
+
+    p.noFill()
+    p.stroke(0, 200, 120, 100)
+    p.strokeWeight(2)
+    p.rect(x, y, w, h)
+  }
 }
 
 class QuadTree {
@@ -78,7 +144,7 @@ class QuadTree {
       return false
     }
 
-    console.log("points: ", points)
+    //console.log("points: ", points)
     if (points.length < this.threshold) {
       points.push(p)
       return true
@@ -106,8 +172,8 @@ class QuadTree {
     this.divided = true
   }
 
-  query(c : Rect): Point[] {
-    if (!this.bounds.intersects(c)) {
+  query(c : Container): Point[] {
+    if (!c.intersects(this.bounds) ) { //this.bounds.intersects(c)) {
       return []
     }
     const points = this.points.filter(pt => c.contains(pt) )
@@ -124,11 +190,11 @@ class QuadTree {
   }
 
   draw(p : p5) {
+    //p.rectMode(p.CORNER)
 
     const {x, y, w, h} = this.bounds
     p.noFill()
     p.stroke(200)
-    p.rectMode(p.CORNER)
     p.rect(x, y, w, h)
 
     if(this.divided) {
