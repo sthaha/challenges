@@ -1,8 +1,11 @@
 const boids = 400
+const sharks = 5
 const BoidRadius = 8
+const SharkRadius = 2.5 * BoidRadius
 
 const nearBy = BoidRadius * 10
 const MinSeperation = BoidRadius * 3.5
+const EscapeDistance = BoidRadius * 24
 
 const MaxForce =  2.0
 const MaxVelocity =  8
@@ -11,6 +14,7 @@ const factor = {
   alignment: 0.8,
   separation: 1.0,
   cohesion: 0.35,
+  repell: 1.8,
 }
 const render = {
   radius: false,
@@ -24,6 +28,7 @@ class Boid {
   velocity : p5.Vector
   maxVelocity : number
   neighbours : Boid[]
+  repell : boolean
 
   constructor(p : p5) {
     this.p = p
@@ -33,6 +38,7 @@ class Boid {
     this.velocity.setMag(p.random(2, MaxVelocity))
 
     this.maxVelocity = MaxVelocity
+    this.repell = false
   }
 
 
@@ -40,8 +46,10 @@ class Boid {
   get y() : number { return this.pos.y }
   get proximity(): Circle {return new Circle(this.pos.x, this.pos.y, nearBy)}
 
+ setRepell(v: boolean) {this.repell = v}
+
   draw() {
-    const {p, pos, neighbours} = this
+    const {p, pos, neighbours, repell} = this
     p.noStroke()
 
     if (render.radius) {
@@ -52,8 +60,14 @@ class Boid {
       p.fill(220, 100, 200, 50 + 140 * 1/(neighbours.length + 1))
       p.ellipse(pos.x, pos.y, MinSeperation + BoidRadius, MinSeperation +BoidRadius)
     }
-    p.fill(20, 180, 240, 240)
-    p.ellipse(pos.x, pos.y, BoidRadius, BoidRadius)
+    if (repell) {
+      p.fill(220, 180, 40, 240)
+      p.ellipse(pos.x, pos.y, SharkRadius, SharkRadius)
+
+    } else {
+      p.fill(20, 180, 240, 240)
+      p.ellipse(pos.x, pos.y, BoidRadius, BoidRadius)
+    }
   }
 
 
@@ -125,6 +139,46 @@ class Boid {
     return steer
 
   }
+  keepAway() {
+    const {pos, maxVelocity, velocity, neighbours,  p} = this
+
+
+    const sharks = neighbours.filter(x => x.repell)
+    if (sharks.length == 0) {
+      return p.createVector()
+    }
+
+    let steer = p.createVector()
+    const fish = neighbours.filter(x => !x.repell)
+
+
+
+    // find avg position
+
+    // avg position
+    let inRange = 0
+    for (let s of sharks) {
+      const dist = pos.dist(s.pos) + BoidRadius
+      if (dist > EscapeDistance) {
+        continue
+      }
+      // vector Other -> me
+      let sepForce = p5.Vector.sub(pos, s.pos)
+      sepForce.div(dist)
+      steer.add(sepForce)
+      inRange++
+    }
+    if (inRange == 0) {
+      return p.createVector()
+    }
+
+    // take the average
+    steer.div(inRange)
+
+    steer.setMag(maxVelocity)
+    steer.limit(MaxForce)
+    return steer
+  }
 
   update(qtree : QuadTree) {
     const {pos, velocity, p} = this
@@ -149,6 +203,10 @@ class Boid {
       const sep = this.seperation()
       sep.mult(factor.separation)
       accel.add(sep)
+
+      const repell = this.keepAway()
+      repell.mult(factor.repell)
+      accel.add(repell)
     }
 
 
@@ -188,6 +246,12 @@ const sketch = (p : p5) =>  {
     for (let i = 0; i < boids; i++) {
       flock.push(new Boid(p))
     }
+    for (let i = 0; i < sharks; i++) {
+      const shark = new Boid(p)
+      shark.setRepell(true)
+      flock.push(shark)
+    }
+
     //p.noLoop()
   }
 
