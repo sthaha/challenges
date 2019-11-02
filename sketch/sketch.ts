@@ -1,19 +1,28 @@
-const boids = 200
+const boids = 400
 const BoidRadius = 8
 
-const nearBy = BoidRadius * 5
-const MinSeperation = BoidRadius * 3
+const nearBy = BoidRadius * 10
+const MinSeperation = BoidRadius * 3.5
 
 const MaxForce =  2.0
-const MaxSpeed =  8
-const showRadius = false
+const MaxVelocity =  8
+
+const factor = {
+  alignment: 0.8,
+  separation: 1.0,
+  cohesion: 0.35,
+}
+const render = {
+  radius: false,
+  separation: false,
+}
 
 class Boid {
   p : p5
+
   pos : p5.Vector
   velocity : p5.Vector
-  accel : p5.Vector
-  speed : number
+  maxVelocity : number
   neighbours : Boid[]
 
   constructor(p : p5) {
@@ -21,32 +30,37 @@ class Boid {
     this.pos = p.createVector(p.random(p.width), p.random(p.height))
 
     this.velocity = p5.Vector.random2D()
-    this.velocity.setMag(p.random(2, MaxSpeed))
-    this.accel = p.createVector()
+    this.velocity.setMag(p.random(2, MaxVelocity))
 
-    this.speed = MaxSpeed
+    this.maxVelocity = MaxVelocity
   }
+
+
+  get x() : number { return this.pos.x }
+  get y() : number { return this.pos.y }
+  get proximity(): Circle {return new Circle(this.pos.x, this.pos.y, nearBy)}
 
   draw() {
     const {p, pos, neighbours} = this
     p.noStroke()
 
-    if (showRadius) {
+    if (render.radius) {
       p.fill(130, 130, 210, 50 + 140 * 1/(neighbours.length + 1))
       p.ellipse(pos.x, pos.y, nearBy + BoidRadius, nearBy +BoidRadius)
     }
-    p.fill(20, 140, 220, 200)
+    if (render.separation) {
+      p.fill(220, 100, 200, 50 + 140 * 1/(neighbours.length + 1))
+      p.ellipse(pos.x, pos.y, MinSeperation + BoidRadius, MinSeperation +BoidRadius)
+    }
+    p.fill(20, 180, 240, 240)
     p.ellipse(pos.x, pos.y, BoidRadius, BoidRadius)
   }
 
 
   align() {
-    const {neighbours,velocity, speed, p } = this
-    let steer = p.createVector()
-    if (neighbours.length == 0) {
-      return steer
-    }
+    const {neighbours,velocity, maxVelocity, p } = this
 
+    let steer = p.createVector()
     for (let b of neighbours) {
       steer.add(b.velocity)
     }
@@ -55,19 +69,15 @@ class Boid {
     // find the steering vector
     steer.sub(velocity)
 
-    steer.setMag(speed)
+    steer.setMag(maxVelocity)
     steer.limit(MaxForce)
     return steer
   }
 
   cohesion() {
-    const {neighbours, pos, speed, velocity, p} = this
+    const {neighbours, pos, maxVelocity, velocity, p} = this
 
     let steer = p.createVector()
-    if (neighbours.length == 0) {
-      return steer
-    }
-
     // avg position
     for (let b of neighbours) {
       steer.add(b.pos)
@@ -80,24 +90,21 @@ class Boid {
     // find the change in my velocity to reach there
     steer.sub(velocity)
 
-    steer.setMag(speed)
+    steer.setMag(maxVelocity)
     steer.limit(MaxForce)
     return steer
   }
 
   seperation() {
-    const {pos, speed, velocity, neighbours,  p} = this
+    const {pos, maxVelocity, velocity, neighbours,  p} = this
 
     let steer = p.createVector()
-    if (neighbours.length == 0) {
-      return steer
-    }
 
     // avg position
     let inRange = 0
     for (let b of neighbours) {
-      const dist = pos.dist(b.pos)
-      if (dist > MinSeperation || dist === 0) {
+      const dist = pos.dist(b.pos) + BoidRadius
+      if (dist > MinSeperation) {
         continue
       }
       // vector Other -> me
@@ -106,35 +113,48 @@ class Boid {
       steer.add(sepForce)
       inRange++
     }
-    steer.div(p.max(inRange, 1))
+    if (inRange == 0) {
+      return p.createVector()
+    }
 
-    steer.setMag(speed)
+    // take the average
+    steer.div(inRange)
+
+    steer.setMag(maxVelocity)
     steer.limit(MaxForce)
     return steer
 
   }
 
-  update(flock : Boid[]) {
+  update(qtree : QuadTree) {
     const {pos, velocity, p} = this
-    this.neighbours = flock.filter(x => x != this && pos.dist(x.pos) <= nearBy)
 
+    this.neighbours  = qtree.query(this.proximity)
+      .map(x => x.data)
+      .filter(x => x != this)
 
     let accel = p.createVector()
 
-    const sep = this.seperation()
-    accel.add(sep)
+    if (this.neighbours.length > 0 ) {
 
-    const cohesion = this.cohesion()
-    accel.add(cohesion)
+      const cohesion = this.cohesion()
+      cohesion.mult(factor.cohesion)
+      accel.add(cohesion)
 
 
-    const steer = this.align()
-    accel.add(steer)
+      const align = this.align()
+      align.mult(factor.alignment)
+      accel.add(align)
+
+      const sep = this.seperation()
+      sep.mult(factor.separation)
+      accel.add(sep)
+    }
 
 
     accel.limit(MaxForce)
     velocity.add(accel)
-    velocity.limit(MaxSpeed)
+    velocity.limit(MaxVelocity)
 
     pos.add(velocity)
     this.wrap()
@@ -168,6 +188,7 @@ const sketch = (p : p5) =>  {
     for (let i = 0; i < boids; i++) {
       flock.push(new Boid(p))
     }
+    //p.noLoop()
   }
 
   p.windowResized = () => {
@@ -179,14 +200,19 @@ const sketch = (p : p5) =>  {
   p.draw = () => {
     p.background(0)
     p.fill(0)
-
-    const snapshot = [...flock]
+    let qtree = new QuadTree(new Rect(0, 0, p.width, p.height), 4)
     for (let f of flock) {
-      f.update(snapshot)
+      qtree.insert({x: f.x, y: f.y, data: f})
+    }
+
+    //const snapshot = [...flock]
+    for (let f of flock) {
+      f.update(qtree)
       f.draw()
     }
 
   }
+  p.mousePressed = () =>  { console.log(p.frameRate()) }
 }
 
 new p5(sketch)
