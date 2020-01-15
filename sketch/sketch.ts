@@ -1,18 +1,18 @@
 const sketch = (p : p5) =>  {
 
-//let instructions = "ffffrffflfffrfffrffflffflffffffffrfffrr";
+const instructions = "ffffrffflfff";
+//const instructions = "ffffrffflfffrfffrffflffflffffffffrfffrr";
+const steps = instructions.split("");
 
-//const steps = instructions.split("");
-
- const steps = [
-     'f', 'a', 'f', 'b', 'r',
-     //'f', 'f', 'f', 'l',
-     //'f', 'f','f', 'r',
-     //'f', 'f', 'f', 'r',
-     //'f', 'f', 'f', 'f', 'l',
-     //'f', 'f', 'f', 'r',
-     //'b', 'b', 'b', 'l', 'f', 'f', 'f', 'f', 'r',
- ];
+ //const steps = [
+     //'f', 'a', 'f', 'b', 'r',
+     ////'f', 'f', 'f', 'l',
+     ////'f', 'f','f', 'r',
+     ////'f', 'f', 'f', 'r',
+     ////'f', 'f', 'f', 'f', 'l',
+     ////'f', 'f', 'f', 'r',
+     ////'b', 'b', 'b', 'l', 'f', 'f', 'f', 'f', 'r',
+ //];
 
 
 
@@ -96,19 +96,20 @@ const back = () => {
 
 const turnRight = () => {
   clearBeebot();
-  beebot.angle += 90;
+  beebot.angle = (beebot.angle + 90)  % 360;
+
   drawBeebot();
 };
 
 const turnLeft = () => {
   clearBeebot();
-  beebot.angle -= 90;
+  beebot.angle = (beebot.angle - 90)  % 360;
   drawBeebot();
 };
 
 const abouturn  = () => {
   clearBeebot();
-  beebot.angle += 180;
+  beebot.angle = (beebot.angle + 180)  % 360;
   drawBeebot();
 };
 
@@ -142,40 +143,37 @@ const abouturn  = () => {
   p.setup = () => {
     p.createCanvas(p.windowWidth, p.windowHeight)
     p.angleMode(p.DEGREES)
+    p.frameRate(2)
     for (let i = 0; i< p.width; i+= gridSize) {
         p.line(0, i, p.width, i);
         p.line(i, 0, i, p.height);
     }
 
     move(0, 0, 90);
-    noLoop()
+    //noLoop()
   }
 
 
-  let current = 0;
+  let next = 0;
+  const reset = ()=> {
+    move(0, 0, 90)
+    next = 0;
+  }
 
   p.draw = () => {
-    if (current >= steps.length) {
-      move(0, 0, 90);
-      current = 0;
+    if (next >= steps.length) {
+      reset()
       return;
     }
 
-    if (isLooping) {
-      const x = p.frameCount / 15 ;
-      if (x <= current+1) {
-        return;
-      }
-    }
-
-    switch (steps[current]) {
+    switch (steps[next]) {
         case 'f': forward(); break;
         case 'r': turnRight(); break;
         case 'l': turnLeft(); break;
         case 'b': back(); break;
         case 'a': abouturn(); break;
     }
-    current++;
+    next++;
   }
 }
 
