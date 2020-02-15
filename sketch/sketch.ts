@@ -1,5 +1,5 @@
-const boids = 400
-const sharks = 5
+const boids = 100
+const sharks = 2
 const BoidRadius = 8
 const SharkRadius = 2.5 * BoidRadius
 
