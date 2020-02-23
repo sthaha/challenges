@@ -31,20 +31,19 @@ const sketch = (p : p5) =>  {
   p.setup = () => {
     const min = p.windowWidth < p.windowHeight ? p.windowWidth : p.windowHeight
     p.createCanvas(min, min)
+
     p.createDiv()
-    minSlider = p.createSlider(-4.5, 4.5, -3.4, 0.01 )
-    p.createDiv()
-    maxSlider = p.createSlider(-4.5, 4.5, 3.2, 0.01 )
-    p.createDiv()
-    divergenceSlider = p.createSlider(1, 20, 5, 0.5)
+    minSlider = p.createSlider(-4.5, 4.5, -2.22, 0.01 )
+    maxSlider = p.createSlider(-4.5, 4.5, 1.7, 0.01 )
+    divergenceSlider = p.createSlider(3.5, 24.0, 6, 0.5)
     //noLoop()
   }
 
-  const prev = {
+  let prev = {
     min : 0, max: 0, divergence: 0
   };
 
-  const maxIterations = 150;
+  const maxIterations = 80;
   p.draw = () => {
     const min = <number>minSlider.value()
     const max = <number>maxSlider.value()
@@ -52,6 +51,8 @@ const sketch = (p : p5) =>  {
     if (prev.min == min && prev.max == max && prev.divergence == divergence) {
       return
     }
+    prev = {min, max, divergence}
+    console.log(min, max, divergence)
 
     p.background(0)
     p.pixelDensity(1)
@@ -89,8 +90,11 @@ const sketch = (p : p5) =>  {
         }
 
         // normalize the brightness of the pixel
-        const norm = p.map(n, 0, maxIterations, 0.0, 1.0)
-        const brightness = p.map(p.sqrt(norm), 0, 1.0, 200, 0)
+        let brightness = 25
+        if (n != maxIterations) {
+          const norm = p.map(n, 0, maxIterations, 0.0, 1.0)
+          brightness = p.map(p.sqrt(norm), 0, 1.0, 255, 0)
+        }
 
 
         const pix = (row + x) * 4
