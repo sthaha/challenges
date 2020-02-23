@@ -26,24 +26,40 @@ const sketch = (p : p5) =>  {
 
   let minSlider: p5.Element
   let maxSlider: p5.Element
+  let divergenceSlider: p5.Element
 
   p.setup = () => {
     const min = p.windowWidth < p.windowHeight ? p.windowWidth : p.windowHeight
     p.createCanvas(min, min)
     p.createDiv()
-    minSlider = p.createSlider(-2, 2, -1, 0.01 )
-    maxSlider = p.createSlider(-2, 2, 1, 0.01 )
-    noLoop()
+    minSlider = p.createSlider(-4.5, 4.5, -3.4, 0.01 )
+    p.createDiv()
+    maxSlider = p.createSlider(-4.5, 4.5, 3.2, 0.01 )
+    p.createDiv()
+    divergenceSlider = p.createSlider(1, 20, 5, 0.5)
+    //noLoop()
   }
 
-  const maxIterations = 80;
+  const prev = {
+    min : 0, max: 0, divergence: 0
+  };
+
+  const maxIterations = 150;
   p.draw = () => {
+    const min = <number>minSlider.value()
+    const max = <number>maxSlider.value()
+    const divergence = <number>divergenceSlider.value()
+    if (prev.min == min && prev.max == max && prev.divergence == divergence) {
+      return
+    }
+
     p.background(0)
     p.pixelDensity(1)
     p.loadPixels()
 
-    const min = minSlider.value()
-    const max = maxSlider.value()
+
+
+    const divering = p.map(p.mouseX, 0, p.width, 10, 100)
     for (let y = 0; y < p.height; y++) {
       const row = y * p.width
 
@@ -55,9 +71,8 @@ const sketch = (p : p5) =>  {
 
         let real = a
         let img  = b
-        let growth = 0
-
-        for (let i = 0; i < maxIterations; i++ ) {
+        let n = 0 // number of iter
+        for (n = 0; n < maxIterations; n++ ) {
           // a2 - b2 + 2abi
           // r = a2 = b2
           // i = 2abi
@@ -68,20 +83,21 @@ const sketch = (p : p5) =>  {
           real = r + a
           img = i + b
 
-          if (real*real + img*img > 30) {
+          if (real*real + img*img > divergence) {
             break
           }
-          growth++
         }
 
-        const brightness = p.map(growth, 0, maxIterations, 0, 255)
+        // normalize the brightness of the pixel
+        const norm = p.map(n, 0, maxIterations, 0.0, 1.0)
+        const brightness = p.map(p.sqrt(norm), 0, 1.0, 200, 0)
 
 
         const pix = (row + x) * 4
         p.pixels[pix + 0] = brightness // rbga
         p.pixels[pix + 1] = brightness
         p.pixels[pix + 2] = brightness
-        p.pixels[pix + 3] = 200
+        p.pixels[pix + 3] = 255
       }
     }
     p.updatePixels()
