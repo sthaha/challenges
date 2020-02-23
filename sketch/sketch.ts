@@ -33,8 +33,8 @@ const sketch = (p : p5) =>  {
     p.createCanvas(min, min)
 
     p.createDiv()
-    minSlider = p.createSlider(-4.5, 4.5, -2.22, 0.01 )
-    maxSlider = p.createSlider(-4.5, 4.5, 1.7, 0.01 )
+    minSlider = p.createSlider(-4.5, 4.5, -1.83, 0.01 )
+    maxSlider = p.createSlider(-4.5, 4.5, 1.8, 0.01 )
     divergenceSlider = p.createSlider(3.5, 24.0, 6, 0.5)
     //noLoop()
   }
@@ -42,6 +42,8 @@ const sketch = (p : p5) =>  {
   let prev = {
     min : 0, max: 0, divergence: 0
   };
+
+  const julia = {real: -0.8, img:  0.156}
 
   const maxIterations = 80;
   p.draw = () => {
@@ -81,8 +83,8 @@ const sketch = (p : p5) =>  {
           const r =  real * real - img * img
           const i =  2 * real * img
 
-          real = r + a
-          img = i + b
+          real = r + julia.real
+          img = i + julia.img
 
           if (real*real + img*img > divergence) {
             break
