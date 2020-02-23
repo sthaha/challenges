@@ -23,10 +23,17 @@ const sketch = (p : p5) =>  {
     p.resizeCanvas(min, min)
   }
 
+
+  let minSlider: p5.Element
+  let maxSlider: p5.Element
+
   p.setup = () => {
     const min = p.windowWidth < p.windowHeight ? p.windowWidth : p.windowHeight
     p.createCanvas(min, min)
-    //noLoop()
+    p.createDiv()
+    minSlider = p.createSlider(-2, 2, -1, 0.01 )
+    maxSlider = p.createSlider(-2, 2, 1, 0.01 )
+    noLoop()
   }
 
   const maxIterations = 80;
@@ -35,16 +42,16 @@ const sketch = (p : p5) =>  {
     p.pixelDensity(1)
     p.loadPixels()
 
-    let range = p.map(p.mouseX, 0, p.width, 0.50, 2)
-
+    const min = minSlider.value()
+    const max = maxSlider.value()
     for (let y = 0; y < p.height; y++) {
       const row = y * p.width
 
       for (let x = 0; x < p.width; x++){
 
         // a + bi
-        const a = p.map(x, 0, p.width, -range, range)
-        const b = p.map(y, 0, p.height, -range, range)
+        const a = p.map(x, 0, p.width, min, max)
+        const b = p.map(y, 0, p.height, min, max)
 
         let real = a
         let img  = b
@@ -82,3 +89,5 @@ const sketch = (p : p5) =>  {
 }
 
 new p5(sketch)
+
+
