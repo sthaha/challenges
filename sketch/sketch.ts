@@ -28,6 +28,7 @@ const sketch = (p : p5) =>  {
   }
 
 
+  let scale = 1.058
   p.draw = () => {
     p.background(0)
     p.translate(p.width/2, p.height/2)
@@ -35,8 +36,7 @@ const sketch = (p : p5) =>  {
     p.strokeWeight(2)
     p.fill(170, 160)
 
-    const scale = 1.058
-    let len = 100
+    let len = 20
     let p0 = p.createVector()
     let p1 = p.createVector(len, 0)
     p.line(p0.x, p0.y, p1.x, p1.y)
@@ -60,6 +60,7 @@ const sketch = (p : p5) =>  {
       c = next
     }
 
+    scale = p.min(1.45, scale + 0.001)
   }
 }
 
