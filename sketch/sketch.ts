@@ -37,18 +37,18 @@ const sketch = (p : p5) =>  {
   }
 
 
-  const radius = 300;
+  const radius = 200;
   const slices = 99;
 
-  let mult = 0.12;
+  let mult = 1.00;
   p.draw = () => {
     p.translate(p.width/2, p.height/2)
     p.background(0)
     p.noFill()
     p.stroke(128, 100, 100)
     p.strokeWeight(4)
-    // p.circle(0, 0, radius*2)
-    // p.point(0,0)
+    p.circle(0, 0, radius*2)
+    p.point(0,0)
 
     p.stroke(18, 180, 210)
 
@@ -65,7 +65,7 @@ const sketch = (p : p5) =>  {
       const y = p.sin(i * mult/slices * p.TWO_PI) * radius;
       p.line(p1.x, p1.y, x, y)
     }
-    mult += 0.0034
+    mult += 0.005
   }
 }
 
