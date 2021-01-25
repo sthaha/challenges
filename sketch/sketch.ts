@@ -17,6 +17,9 @@ const sketch = (p : p5) =>  {
     }
   }
 
+  const superFormula = (t:number, a: number, b:number, m: number, n1: number, n2: number, n3: number) => {
+    return 1
+  }
 
   p.windowResized = () => {
     p.resizeCanvas(p.windowWidth, p.windowHeight)
@@ -29,11 +32,20 @@ const sketch = (p : p5) =>  {
 
   p.draw = () => {
     p.background(0)
+    p.translate(p.width/2, p.height/2)
 
-    p.fill(200)
+    p.noFill()
     p.stroke(255)
-    p.strokeWeight(5)
-    p.rect(100, 100, p.width-200, p.height-200)
+    p.strokeWeight(3)
+    p.beginShape()
+
+    for (let theta = 0; theta < p.TWO_PI; theta+= 0.01){
+      const rad = superFormula(theta)
+      const x  = rad * p.cos(theta) * 50
+      const y  = rad * p.sin(theta) * 50
+      p.vertex(x,y)
+    }
+    p.endShape()
   }
 }
 
